@@ -17,13 +17,6 @@ package object amp_v2 {
     val empty = ObserveResponse(null, success = true, Option.empty)
   }
 
-  trait Method
-  object Method {
-    case object OBSERVE
-    case object DECIDE
-    case object DECIDE_WITH_CONTEXT
-  }
-
   case class SessionBuilder(private val amp: Amp, userId: String, sessionId: String, ampToken: String, timeOut: Duration, sessionLifetime: Duration) {
     def build(): Session = {
       amp.createSession(userId, sessionId, timeOut, sessionLifetime, ampToken)
