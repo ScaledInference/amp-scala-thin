@@ -36,10 +36,9 @@ case class Session(amp: Amp, userId: String, sessionId: String, timeOut: Duratio
       (PropertiesField.fieldName -> parse(Serialization.write(context))) ~
       (DecisionField.fieldName ->
         (CandidatesField.fieldName -> candidatesJObj) ~
-          (LimitField.fieldName -> 1)
-        )
-
-    asDecideResponse(amp.getDecideUrl(userId))(reqJSON, {()  ⇒ getCandidatesAtIndex(candidates, 0) }, timeout)
+        (LimitField.fieldName -> 1)
+      )
+    asDecideResponse(amp.getDecideWithContextUrl(userId))(reqJSON, {()  ⇒ getCandidatesAtIndex(candidates, 0) }, timeout)
   }
 
   def observe(contextName: String, context: Map[String, Any], timeout: Duration): ObserveResponse = {
