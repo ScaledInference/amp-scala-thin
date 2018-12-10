@@ -147,7 +147,6 @@ object Session {
       options = SttpBackendOptions.connectionTimeout(new FiniteDuration(timeOut.toMillis, TimeUnit.MILLISECONDS)))
     Try {
       val url = uri"$aa/test/update_from_spa/$key/?session_life_time=${sessionLifeTime.toMillis}"
-      println("request: " + url)
       val request = sttp.get(url)
       val response = request.send()
       if (response.code != 200) {

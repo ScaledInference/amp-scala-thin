@@ -6,25 +6,37 @@ import scala.util.{Failure, Success}
 object AmpSingleSession {
   def main(args: Array[String]): Unit = {
     val key = getAt(args, 0).getOrElse("98f3c5cdb920c361")
-    //implicit val system: ActorSystem = ActorSystem()
-    //implicit val timeout: Timeout = Timeout(10 seconds)
-    //val log = system.log
+
     val triedAmp = Amp.create(key, if (args.drop(1).isEmpty) Vector("http://localhost:8100") else args.drop(1).toVector)
     triedAmp match {
       case Success(amp) =>
-        val sess = amp.buildSession().copy(timeOut = 20 seconds).build()  //.createSession(null, null, null, null, "rajan")
-      val context1 = Map("browser_height" -> 1740, "browser_width" -> 360)
-        val can = List(CandidateField("color", List[Any]("red", "green", "blue")), CandidateField("count", List[Any](10, 100)))
+        val firstSession = amp.buildSession().copy(timeOut = 20 seconds).build()  //.createSession(null, null, null, null, "rajan")
+        println("firstSession = ", firstSession)
+        val context1 = Map("browser_height" -> 1740, "browser_width" -> 360)
+        val candidates = List(CandidateField("color", List[Any]("red", "green", "blue")), CandidateField("count", List[Any](10, 100)))
         // Prepare candidates for making a decideWithContext call.
-        println(sess.decideWithContext("AmpSession", context1, "ScalaDecisionWithContext", can, 3 seconds))
+        println("Calling firstSession.decideWithContext, with a 3 seconds timeout")
+        val decisionAdnToken = firstSession.decideWithContext("AmpSession", context1, "ScalaDecisionWithContext", candidates, 3 seconds)
+        println("decisionAndToken = ", decisionAdnToken)
+        println(s"Returned ampToken ${decisionAdnToken.ampToken} \n of length ${decisionAdnToken.ampToken.length}")
+        println(s"Returned decision: ${decisionAdnToken.decision}")
+        if(decisionAdnToken.fallback){
+          println("Decision NOT successfully obtained from amp-agent. Using a fallback instead.")
+          println(s" The reason is : ${decisionAdnToken.failureReason}")
+        }else println("Decision successfully obtained from amp-agent")
 
-        println(sess.observe("ScalaObserveMetric", context1, 0 seconds))
+        println("Calling firstSession.observe with default timeout")
+        val observeResponse = firstSession.observe("ScalaObserveMetric", context1, 0 seconds)
+        println(s"Returned ampToken ${observeResponse.ampToken} \n of length ${observeResponse.ampToken.length}")
+        if(!observeResponse.success){
+          println("Observe NOT successfully sent to amp-agent.")
+          println(s" The Reason is: ${observeResponse.failureReason}")
+        }else println("Observe successfully sent to amp-agent.")
       case Failure(t) =>
         t.printStackTrace()
         println(s"Failure: ${t.getMessage}" )
       //assert t.getMessage().
     }
-    //Await.ready(system.terminate(), timeout.duration)
   }
 
   def getAt[T](args: Array[T], index: Int): Option[T] = {
