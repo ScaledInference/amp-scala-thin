@@ -38,3 +38,41 @@ Returned ampToken Gk8FGg4GAExeRxpYICwRL1oZGSokFxgGNVBNSEcBDwwdEU1RRxdXVhIICxEAGD
 Observe successfully sent to amp-agent.
 
 ```
+
+## Troubleshooting
+
+<b>AmpSingleSession</b> can be used to to some troubleshooting
+
+<b>If the domain host is wrong</b>, e.g. "http://localhost1:8100", you will be seeing a <b>UnknownHostException</b>. The output will look something like
+
+```
+Failure: Error occurred while connecting to Amp agent http://localhost1:8100. Cause java.net.UnknownHostException: localhost1 (of class java.lang.String)
+scala.MatchError: Error occurred while connecting to Amp agent http://localhost1:8100. Cause java.net.UnknownHostException: localhost1 (of class java.lang.String)
+	at com.scaledinference.amp_v2.Amp$.$anonfun$create$1(Amp.scala:47)
+	at scala.util.Try$.apply(Try.scala:209)
+	at com.scaledinference.amp_v2.Amp$.create(Amp.scala:41)
+	at com.scaledinference.amp_v2.AmpSingleSession$.main(AmpSingleSession.scala:9)
+	at com.scaledinference.amp_v2.AmpSingleSession.main(AmpSingleSession.scala)
+```
+<b>If the domain port is wrong</b>, e.g. "http://localhost:9000", you will be seeing a <b>ConnectException</b>. The output will look something like
+
+```
+Failure: Error occurred while connecting to Amp agent http://localhost:9000. Cause java.net.ConnectException: Connection refused (Connection refused) (of class java.lang.String)
+scala.MatchError: Error occurred while connecting to Amp agent http://localhost:9000. Cause java.net.ConnectException: Connection refused (Connection refused) (of class java.lang.String)
+	at com.scaledinference.amp_v2.Amp$.$anonfun$create$1(Amp.scala:47)
+	at scala.util.Try$.apply(Try.scala:209)
+	at com.scaledinference.amp_v2.Amp$.create(Amp.scala:41)
+	at com.scaledinference.amp_v2.AmpSingleSession$.main(AmpSingleSession.scala:9)
+	at com.scaledinference.amp_v2.AmpSingleSession.main(AmpSingleSession.scala)
+```
+<b>If the domain is correct, but the project key is incorrect</b>, e.g. "Incorrect project key", the output will look something like
+
+```
+Failure: Error occurred while connecting to Amp agent http://localhost:8100. Cause java.lang.Error: Failed to call AmpAgent http://localhost:8100: 400 with reason Bad Request (of class java.lang.String)
+scala.MatchError: Error occurred while connecting to Amp agent http://localhost:8100. Cause java.lang.Error: Failed to call AmpAgent http://localhost:8100: 400 with reason Bad Request (of class java.lang.String)
+	at com.scaledinference.amp_v2.Amp$.$anonfun$create$1(Amp.scala:47)
+	at scala.util.Try$.apply(Try.scala:209)
+	at com.scaledinference.amp_v2.Amp$.create(Amp.scala:41)
+	at com.scaledinference.amp_v2.AmpSingleSession$.main(AmpSingleSession.scala:9)
+	at com.scaledinference.amp_v2.AmpSingleSession.main(AmpSingleSession.scala)
+```
