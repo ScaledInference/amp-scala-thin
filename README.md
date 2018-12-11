@@ -12,6 +12,8 @@ The objects are created with default values and use only the required parameters
 This creates an amp object, and two session objects and makes a single call on each objects.
 The objects are created with non default values to override the api defaults.
 
+## Usage
+
 The scala thin client itself can be compiled by running "sbt compile" or packaged by running "sbt package" from the command line in the directory containing this README file.
 
 In order to run the example <b>AmpSingleSession</b> via a command line in the directory containing this README file
