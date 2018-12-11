@@ -38,7 +38,27 @@ Calling firstSession.observe with default timeout
 Returned ampToken Gk8FGg4GAExeRxpYICwRL1oZGSokFxgGNVBNSEcBDwwdEU1RRxdXVhIICxEAGDc9DSEAMj5GSUEfDwALQ1dSTVcNVg1RBgcNXVdCAl5GRU1HRx4QHBMKRl9QICAgMStJSUwXERBNXlRHVVlETFlSVFpVVlFDRgkbBwgEHQIOR1RVXVNfVFVCTU8ZGgsOHQsXR1kURlVFUV8UTV5bVghVBFtZXFERVwkSQlleVFcCBFZWVgdDQ1dACRI= 
  of length 248
 Observe successfully sent to amp-agent.
+```
 
+The analogous documentation for <b>AmpMultipleSession</b> is 
+```
+sbt "test:runMain com.scaledinference.amp_v2.AmpMultipleSession 98f3c5cdb920c361 http://localhost:8100"
+```
+with output something like 
+
+```
+session1: Session(Amp(98f3c5cdb920c361,Vector(http://localhost:8100),10 seconds,15 minutes,false),neHoDsl1tVytGTyD,uqGSJQ9V6P6Dg59O,1 second,1 hour,)
+Calling session1.decideWithContext
+Returned ampToken 
+ Gk8FGg4GAExeRw0KLAo2EgFBADkSESkwHCdNSEcBDwwdEU1RRxsVIjAlNVwkVz1GMAheXCFGSUEfDwALQ1dSTVcNVg1RBgcNXVdCAl5GRU1HRx4QHBMKRl9QICAgMStJSUwXERBNXlRHVVlETV5eUFhVV1dDRgkbBwgEHQIOR1RXU1NfVFVCTU8ZGgsOHQsXR1kURlVFUV8UTV5bVghVBFtZXFERVwkSQlleVFcCBFZWVgdDQ1dACRI= 
+ of length 248
+Returned decision: Map(color -> red, count -> 10)
+Decision successfully obtained from amp-agent
+Calling session1.observe, with default timeout
+Returned ampToken 
+ Gk8FGg4GAExeRw0KLAo2EgFBADkSESkwHCdNSEcBDwwdEU1RRxsVIjAlNVwkVz1GMAheXCFGSUEfDwALQ1dSTVcNVg1RBgcNXVdCAl5GRU1HRx4QHBMKRl9QICAgMStJSUwXERBNXlRHVVlETV5eUFhVV1dDRgkbBwgEHQIOR1RXU1NfVFVCTU8ZGgsOHQsXR1kURlVFUV8UTV5bVghVBFtZXFERVwkSQlleVFcCBFZWVgdDQ1dACRI= 
+ of length 248
+Observe successfully sent to amp-agent.
 ```
 
 ## Troubleshooting
