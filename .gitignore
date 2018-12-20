@@ -15,7 +15,6 @@ libexec/
 lib_managed/
 src_managed/
 logs/
-project/*-shim.sbt
-project/target/
+project/target
 .scala_dependencies
 .worksheet
