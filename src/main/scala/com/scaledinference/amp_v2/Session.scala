@@ -149,7 +149,7 @@ object Session {
       val request = sttp.get(url)
       val response = request.send()
       if (response.code != 200) {
-        throw new RuntimeException(s"Failed to call to AmpAgent $aa: ${response.code} with reason ${response.statusText}")
+        throw new Error(s"Failed to call to AmpAgent $aa: ${response.code} with reason ${response.statusText}")
       }
       true
     }
@@ -163,8 +163,7 @@ object Session {
     }.mkString("")
   }
 
-  def getCandidatesAtIndex(unsortedCandidates: List[CandidateField], index: Int): Map[String, Any] = {
-    val candidates = unsortedCandidates.sortBy(_.name)
+  def getCandidatesAtIndex(candidates: List[CandidateField], index: Int): Map[String, Any] = {
     val keys = candidates.map(_.name)
     val (result, _) = candidates.foldLeft((Seq.empty[Any], index)){
       case ((acc, currentIndex), each) =>

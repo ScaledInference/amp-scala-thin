@@ -52,7 +52,7 @@ object Amp {
 
   private def checkConnection(key: String, timeOut: Duration, sessionLifeTime: Duration, ampAgents: String*): Option[String] = {
     val messages = ampAgents.map(v => v -> Session.testConnection(key, timeOut, sessionLifeTime, v)).collect {
-      case (url, Failure(t)) => s"Error occurred while connecting to ${url}. Cause ${t.getMessage}" //no stack for now.
+      case (url, Failure(t)) => s"Error occurred while connecting to ampAgent ${url}. Cause ${t.getMessage}" //no stack for now.
     }
     if (messages.isEmpty) Option.empty else Some(messages.mkString(", "))
   }
