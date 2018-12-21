@@ -20,7 +20,10 @@ case class Session(amp: Amp, userId: String, sessionId: String, timeOut: Duratio
   private val index = new AtomicInteger()
   private var privateAmpToken: String = ampToken //this makes the session stateful
 
-  def decideWithContext(contextName: String, context: Map[String, Any], decisionName: String, candidates: List[CandidateField], timeout: Duration): DecideResponse = {
+  def decideWithContext(contextName: String, context: Map[String, Any], decisionName: String, candidates: List[CandidateField]): DecideResponse = decideWithContextInternal(contextName, context, decisionName, candidates, Option.empty)
+  def decideWithContext(contextName: String, context: Map[String, Any], decisionName: String, candidates: List[CandidateField], timeout: Duration): DecideResponse = decideWithContextInternal(contextName, context, decisionName, candidates, Some(timeout))
+
+  private def decideWithContextInternal(contextName: String, context: Map[String, Any], decisionName: String, candidates: List[CandidateField], timeout: Option[Duration]): DecideResponse = {
     import com.scaledinference.utils.OptionUtils._
     require(contextName.toOption.nonEmpty, "Context name cannot be empty")
     require(decisionName.toOption.nonEmpty, "Decision name cannot be empty")
@@ -38,10 +41,14 @@ case class Session(amp: Amp, userId: String, sessionId: String, timeOut: Duratio
         (CandidatesField.fieldName -> candidatesJObj) ~
         (LimitField.fieldName -> 1)
       )
-    asDecideResponse(amp.getDecideWithContextUrl(userId))(reqJSON, {()  ⇒ getCandidatesAtIndex(candidates, 0) }, timeout)
+    asDecideResponse(amp.getDecideWithContextUrl(userId))(reqJSON, {()  ⇒ getCandidatesAtIndex(candidates, 0) }, timeout.getOrElse(this.timeOut))
   }
 
-  def observe(contextName: String, context: Map[String, Any], timeout: Duration): ObserveResponse = {
+  def observe(contextName: String, context: Map[String, Any]): ObserveResponse = observeInternal(contextName, context, Option.empty)
+
+  def observe(contextName: String, context: Map[String, Any], timeout: Duration): ObserveResponse = observeInternal(contextName, context, Some(timeout))
+
+  private def observeInternal(contextName: String, context: Map[String, Any], timeout: Option[Duration]): ObserveResponse = {
     import com.scaledinference.utils.OptionUtils._
     require(contextName.toOption.nonEmpty, "Context name cannot be empty")
 
@@ -54,7 +61,7 @@ case class Session(amp: Amp, userId: String, sessionId: String, timeOut: Duratio
       (PropertiesField.fieldName -> parse(Serialization.write(context)))
 
     import com.softwaremill.sttp._
-    HttpUtils.postSync(timeout)(uri"${amp.getObserveUrl(userId)}", reqJSON) { response ⇒
+    HttpUtils.postSync(timeout.getOrElse(this.timeOut))(uri"${amp.getObserveUrl(userId)}", reqJSON) { response ⇒
       parse(response).toOption
         .collect{ case v: JObject if !amp.dontUseTokens ⇒ v.obj }
         .flatMap{ list ⇒ list.collectFirst{
@@ -63,12 +70,15 @@ case class Session(amp: Amp, userId: String, sessionId: String, timeOut: Duratio
             value
         } }
     } match {
-      case Failure(error) ⇒ ObserveResponse.empty.copy(failureReason = Some(error.getMessage), success = false)
+      case Failure(error) ⇒ ObserveResponse.empty.copy(ampToken = this.ampToken, failureReason = Some(error.getMessage), success = false)
       case Success(Some(token)) ⇒ ObserveResponse.empty.copy(token, success=true)
     }
   }
 
-  def decide(decisionName: String, candidates: List[CandidateField], timeout: Duration): DecideResponse = {
+  def decide(decisionName: String, candidates: List[CandidateField]): DecideResponse = decideInternal(decisionName, candidates, Option.empty)
+  def decide(decisionName: String, candidates: List[CandidateField], timeout: Duration): DecideResponse = decideInternal(decisionName, candidates, Some(timeout))
+
+  private def decideInternal(decisionName: String, candidates: List[CandidateField], timeout: Option[Duration] = Option.empty): DecideResponse = {
     import com.scaledinference.utils.OptionUtils._
     require(decisionName.toOption.nonEmpty, "Context name cannot be empty")
     require(Session.getCandidatesCombination(candidates) <= Session.DECIDE_UPPER_LIMIT, s"Can't have more than ${Session.DECIDE_UPPER_LIMIT} candidates")
@@ -84,7 +94,7 @@ case class Session(amp: Amp, userId: String, sessionId: String, timeOut: Duratio
         (CandidatesField.fieldName -> candidatesJObj) ~
           (LimitField.fieldName -> 1)
         )
-    asDecideResponse(amp.getDecideUrl(userId))(reqJSON, {()  ⇒ getCandidatesAtIndex(candidates, 0) }, timeout)
+    asDecideResponse(amp.getDecideUrl(userId))(reqJSON, {()  ⇒ getCandidatesAtIndex(candidates, 0) }, timeout.getOrElse(this.timeOut))
   }
 
   private def asDecideResponse(url: String)(reqJSON: JsonAST.JObject, decision: () ⇒ Map[String, Any], timeout: Duration) = {
@@ -106,7 +116,7 @@ case class Session(amp: Amp, userId: String, sessionId: String, timeOut: Duratio
           }
         }
     } match {
-      case Failure(error) ⇒ DecideResponse.empty.copy(failureReason = Some(error.getMessage))
+      case Failure(error) ⇒ DecideResponse.empty.copy(decision= decision(), fallback = true, ampToken = this.ampToken, failureReason = Some(error.getMessage))
       case Success(Some(entries)) ⇒
         entries.foldLeft(DecideResponse.empty) {
           case (acc, ("ampToken", tokenValue: String)) ⇒ acc.copy(ampToken = tokenValue)
@@ -164,7 +174,7 @@ object Session {
   }
 
   def getCandidatesAtIndex(unsortedCandidates: List[CandidateField], index: Int): Map[String, Any] = {
-    val candidates = unsortedCandidates.sortBy(_.name)
+    val candidates = unsortedCandidates.sortBy(_.name)(Ordering[String].reverse)
     val keys = candidates.map(_.name)
     val (result, _) = candidates.foldLeft((Seq.empty[Any], index)){
       case ((acc, currentIndex), each) =>

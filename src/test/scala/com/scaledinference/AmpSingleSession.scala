@@ -15,13 +15,13 @@ object AmpSingleSession {
         val candidates = List(CandidateField("color", List[Any]("red", "green", "blue")), CandidateField("count", List[Any](10, 100)))
         // Prepare candidates for making a decideWithContext call.
         println("Calling firstSession.decideWithContext, with a 3 seconds timeout")
-        val decisionAdnToken = firstSession.decideWithContext("AmpSession", context, "ScalaDecisionWithContext", candidates, 3 seconds)
-        println("decisionAndToken = ", decisionAdnToken)
-        println(s"Returned ampToken ${decisionAdnToken.ampToken} \n of length ${decisionAdnToken.ampToken.length}")
-        println(s"Returned decision: ${decisionAdnToken.decision}")
-        if(decisionAdnToken.fallback){
+        val decisionAndToken = firstSession.decideWithContext("AmpSession", context, "ScalaDecisionWithContext", candidates, 3 seconds)
+        println("decisionAndToken = ", decisionAndToken)
+        println(s"Returned ampToken ${decisionAndToken.ampToken} \n of length ${decisionAndToken.ampToken.length}")
+        println(s"Returned decision: ${decisionAndToken.decision}")
+        if(decisionAndToken.fallback){
           println("Decision NOT successfully obtained from amp-agent. Using a fallback instead.")
-          println(s" The reason is : ${decisionAdnToken.failureReason}")
+          println(s" The reason is : ${decisionAndToken.failureReason}")
         }else println("Decision successfully obtained from amp-agent")
 
         println("Calling firstSession.observe with default timeout")
@@ -47,10 +47,9 @@ object AmpSingleSession {
 object Test2 extends App {
   val c = List( CandidateField("color", List[Any]("red", "green", "blue")),
     CandidateField("coatSize", List[Any](10, 11, 12, 13, 14)),
-    CandidateField("shirtSize", List[Any](36, 38, 40, 42, 44)),
-    CandidateField("langs", List[Any]("scala", "Go", "js"))
+    CandidateField("count", List[Any](5, 10))
   )
-  (0 to 10).foreach(i => println(Session.getCandidatesAtIndex(c,i)))
+  (0 to 10).foreach(i => println(i + ": " + Session.getCandidatesAtIndex(c,i)))
 
   println(Session.getCandidatesCombination(c))
 }

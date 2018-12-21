@@ -10,13 +10,17 @@ import scala.util.{Failure, Success, Try}
 
 object HttpUtils {
   def postSync[T](timeout: Duration)(uri: Uri, reqBody: JValue)(parseSuccessResponseBody: String => T): Try[T] = {
-    val request = sttp.post(uri).body(compact(reqBody)).header("Content-Type", "application/json")
-      .readTimeout(timeout)
-    implicit val backend: SttpBackend[Id, Nothing] = HttpURLConnectionBackend()
-    val response = request.send()
-    response.body match {
-      case Left(error) => Failure(new MatchError(error))
-      case Right(body) => Success(parseSuccessResponseBody(body))
+    val response = Try {
+      val request = sttp.post(uri).body(compact(reqBody)).header("Content-Type", "application/json")
+        .readTimeout(timeout)
+      implicit val backend: SttpBackend[Id, Nothing] = HttpURLConnectionBackend()
+      request.send().body
+    }
+
+    response match {
+      case Success(Right(body)) => Success(parseSuccessResponseBody(body))
+      case Success(Left(error)) => Failure(new MatchError(error))
+      case Failure(error) => Failure(new MatchError(error))
     }
   }
 }
