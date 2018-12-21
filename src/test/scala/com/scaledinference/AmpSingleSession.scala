@@ -47,10 +47,9 @@ object AmpSingleSession {
 object Test2 extends App {
   val c = List( CandidateField("color", List[Any]("red", "green", "blue")),
     CandidateField("coatSize", List[Any](10, 11, 12, 13, 14)),
-    CandidateField("shirtSize", List[Any](36, 38, 40, 42, 44)),
-    CandidateField("langs", List[Any]("scala", "Go", "js"))
+    CandidateField("count", List[Any](5, 10))
   )
-  (0 to 10).foreach(i => println(Session.getCandidatesAtIndex(c,i)))
+  (0 to 10).foreach(i => println(i + ": " + Session.getCandidatesAtIndex(c,i)))
 
   println(Session.getCandidatesCombination(c))
 }

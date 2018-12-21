@@ -40,8 +40,7 @@ object AmpMultipleSession {
         println(s"session2: ${session2}")
         val context2 = Map("browser_height" -> 1000, "browser_width" -> 480)
         println("Calling session2.decideWithContext with 1 millisecond timeout")
-        val decisionAndToken2 = session2.decideWithContext("AmpSession", context2, "ScalaDecisionWithContext", candidates, timeout = 1000 millisecond)
-        println(decisionAndToken2)
+        val decisionAndToken2 = session2.decideWithContext("AmpSession", context2, "ScalaDecisionWithContext", candidates)
         println(s"Returned ampToken \n ${decisionAndToken2.ampToken} \n of length ${decisionAndToken2.ampToken.length}")
         println(s"Returned decision: ${decisionAndToken2.decision}")
         if(decisionAndToken2.fallback){
@@ -49,7 +48,7 @@ object AmpMultipleSession {
           println(s" The reason is : ${decisionAndToken2.failureReason}")
         }else println("Decision successfully obtained from amp-agent")
         val context3 = Map("url" → "google.com", "pageNumber" → 1)
-        val observeResponse2 = session2.observe("ScalaObserveMetric", context3, timeout = 1 second)
+        val observeResponse2 = session2.observe("ScalaObserveMetric", context3)
         println(s"Returned ampToken ${observeResponse2.ampToken} \n of length ${observeResponse2.ampToken.length}")
         if(!observeResponse2.success){
           println("Observe NOT successfully sent to amp-agent.")
