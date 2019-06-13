@@ -47,14 +47,3 @@ object AmpUserIdBasedIntegrationExample {
     else return Some(args(index))
   }
 }
-
-
-object Test2 extends App {
-  val c = List( CandidateField("color", List[Any]("red", "green", "blue")),
-    CandidateField("coatSize", List[Any](10, 11, 12, 13, 14)),
-    CandidateField("count", List[Any](5, 10))
-  )
-  (0 to 10).foreach(i => println(i + ": " + Session.getCandidatesAtIndex(c,i)))
-
-  println(Session.getCandidatesCombination(c))
-}
