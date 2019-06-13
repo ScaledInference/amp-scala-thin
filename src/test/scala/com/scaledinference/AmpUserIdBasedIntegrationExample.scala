@@ -3,7 +3,7 @@ package com.scaledinference.amp_v2
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
-object AmpUserIdBasedIntegration {
+object AmpUserIdBasedIntegrationExample {
   def main(args: Array[String]): Unit = {
     // fill in your project key
     val key = getAt(args, 0).getOrElse("98f3c5cdb920c361")
