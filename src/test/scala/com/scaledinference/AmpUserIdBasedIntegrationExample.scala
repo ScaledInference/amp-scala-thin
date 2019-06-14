@@ -33,6 +33,7 @@ object AmpUserIdBasedIntegrationExample {
         println("Calling firstSession.observe with default timeout")
         val metricProperties = Map("revenue" -> 100)
         val observeResponse = resumedSession.observe("ScalaObserveMetric", metricProperties, 0 seconds)
+        println("Returned observe response: ", observeResponse)
         if(!observeResponse.success){
           println("Observe NOT successfully sent to amp-agent.")
           println(s" The Reason is: ${observeResponse.failureReason}")
