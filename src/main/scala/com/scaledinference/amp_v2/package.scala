@@ -6,6 +6,12 @@ package object amp_v2 {
 
   case class CandidateField(name: String, values: List[Any])
 
+  case class DecideResponses(ampToken: String, decisions: Array[DecideResponse], error: Option[String])
+
+  object DecideResponses {
+    val empty = DecideResponses(null, Array.empty, Option.empty)
+  }
+
   case class DecideResponse(decision: Map[String, Any], ampToken: String, fallback: Boolean, failureReason: Option[String])
 
   object DecideResponse {

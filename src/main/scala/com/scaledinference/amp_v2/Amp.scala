@@ -14,6 +14,10 @@ case class Amp(key: String, ampAgents: Vector[String], timeOut: Duration, sessio
     s"${selectAmpAgent(userId)}/$api_path/$key/decideWithContextV2"
   }
 
+  def getMultiDecideWithContextUrl(userId:String): String ={
+    s"${selectAmpAgent(userId)}/$api_path/$key/multiDecideWithContext"
+  }
+
   def getDecideUrl(userId:String): String = {
     s"${selectAmpAgent(userId)}/$api_path/$key/decideV2"
   }
@@ -37,12 +41,12 @@ case class Amp(key: String, ampAgents: Vector[String], timeOut: Duration, sessio
 object Amp {
   val api_path = "api/core/v2"
 
-  def create(key: String, ampAgents: Vector[String], timeOut: Duration = 10 seconds, sessionLifeTime: Duration = 30 minutes): Try[Amp] = {
-    Try((Option(key), ampAgents, Option(timeOut).filter(_.toMillis > 0), Option(sessionLifeTime).filter(_.toMillis > 0)) match {
-      case (None, _, _, _) => throw new MatchError("Key cannot be null")
-      case (_, agents, _, _) if agents.isEmpty => throw new MatchError("Agents cannot be empty")
-      case (Some(pKey), agents, t, s) =>
-        val amp = Amp(pKey, agents, t.getOrElse(10 seconds), s.getOrElse(30 minutes))
+  def create(key: String, ampAgents: Vector[String], dontUseToken: Boolean = false, timeOut: Duration = 10 seconds, sessionLifeTime: Duration = 30 minutes): Try[Amp] = {
+    Try((Option(key), ampAgents, dontUseToken,Option(timeOut).filter(_.toMillis > 0), Option(sessionLifeTime).filter(_.toMillis > 0)) match {
+      case (None, _, _, _, _) => throw new MatchError("Key cannot be null")
+      case (_, agents, _, _, _) if agents.isEmpty => throw new MatchError("Agents cannot be empty")
+      case (Some(pKey), agents, dt, t, s) =>
+        val amp = Amp(pKey, agents, t.getOrElse(10 seconds), s.getOrElse(30 minutes), dt)
         checkConnection(key, timeOut, sessionLifeTime, ampAgents:_*) match {
           case Some(message) => throw new MatchError(message)
           case _ => amp
