@@ -5,7 +5,7 @@ import scala.util.{Failure, Success}
 
 object AmpSingleSession {
   def main(args: Array[String]): Unit = {
-    val key = getAt(args, 0).getOrElse("98f3c5cdb920c361")
+    val key = getAt(args, 0).getOrElse("e7dc73f14450d223")
     val triedAmp = Amp.create(key, if (args.drop(1).isEmpty) Vector("http://localhost:8100") else args.drop(1).toVector)
     triedAmp match {
       case Success(amp) =>

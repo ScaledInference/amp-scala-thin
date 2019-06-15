@@ -6,6 +6,12 @@ package object amp_v2 {
 
   case class CandidateField(name: String, values: List[Any])
 
+  case class DecideResponses(ampToken: String, decisions: List[DecideResponse], error: Option[String])
+
+  object DecideResponses {
+    val empty = DecideResponses(null, List.empty, Option.empty)
+  }
+
   case class DecideResponse(decision: Map[String, Any], ampToken: String, fallback: Boolean, failureReason: Option[String])
 
   object DecideResponse {
@@ -41,6 +47,9 @@ package object amp_v2 {
     case object DecisionNameField extends SessionOptions{
       override val fieldName: String = "decisionName"
     }
+    case object DecisionNamesField extends SessionOptions{
+      override val fieldName: String = "decisionNames"
+    }
     case object NameField extends SessionOptions{
       override val fieldName: String = "name"
     }
@@ -61,6 +70,9 @@ package object amp_v2 {
     }
     case object DecisionField extends SessionOptions{
       override val fieldName: String = "decision"
+    }
+    case object DecisionsField extends SessionOptions{
+      override val fieldName: String = "decisions"
     }
     case object CandidatesField extends SessionOptions{
       override val fieldName: String = "candidates"

@@ -1,6 +1,5 @@
 package com.scaledinference.amp_v2
 
-
 import java.util.Date
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -20,13 +19,73 @@ case class Session(amp: Amp, userId: String, sessionId: String, timeOut: Duratio
   private val index = new AtomicInteger()
   private var privateAmpToken: String = ampToken //this makes the session stateful
 
+  def multiDecideWithContext(contextName: String, context: Map[String, Any], decisions: List[(String, List[CandidateField])]) : DecideResponses = multiDecideWithContextInternal(contextName, context, decisions, Option.empty)
+  def multiDecideWithContext(contextName: String, context: Map[String, Any], decisions: List[(String, List[CandidateField])],timeout: Duration): DecideResponses = multiDecideWithContextInternal(contextName, context, decisions, Some(timeout))
+
+  private def multiDecideWithContextInternal(contextName: String, context: Map[String, Any], decisions: List[(String, List[CandidateField])], timeout: Option[Duration]): DecideResponses = {
+    import com.scaledinference.utils.OptionUtils._
+    def getDefaultCandidate(candidates: List[CandidateField]) = getCandidatesAtIndex(candidates, 0)
+    def errorResponse(errorMessage: String): DecideResponses = {
+      val decideResponse = (candidates: List[CandidateField]) ⇒ DecideResponse.empty.copy(decision = getDefaultCandidate(candidates),
+        fallback = true, ampToken = this.ampToken, failureReason = Some("missing either one of them contextName, userId or sessionId"))
+      decisions.foldLeft(DecideResponses.empty.copy(error = Some(errorMessage), ampToken = this.ampToken)) {
+        case (acc, (_, candidates)) ⇒ acc.copy(decisions = acc.decisions :+ decideResponse(candidates))
+      }
+    }
+
+    if (contextName.toOptionString.isEmpty || userId.toOptionString.isEmpty || sessionId.toOptionString.isEmpty) { // pre-decision check
+      return errorResponse("missing context_name, userId or sessionId")
+    }
+    if (decisions.exists(v ⇒ Session.getCandidatesCombination(v._2) >= Session.DECIDE_UPPER_LIMIT)) {
+      return errorResponse(s"Using default decision because there are too many candidates ${Session.DECIDE_UPPER_LIMIT}")
+    }
+    import org.json4s.JsonAST._
+    import org.json4s.JsonDSL._
+    import org.json4s.jackson.JsonMethods._
+    def candidatesJObj(candidates: List[CandidateField]) = JObject("candidates" -> List(JObject(candidates.map(each => each.name -> parse(Serialization.write(each.values))))), "limit" -> JInt(1))
+    val candidates = JArray(decisions.map(_._2).map(candidatesJObj))
+    val reqJSON = baseJSONRequest ~
+      (NameField.fieldName -> contextName) ~
+      (PropertiesField.fieldName -> parse(Serialization.write(context))) ~
+      (DecisionNamesField.fieldName -> decisions.map(_._1)) ~
+      (DecisionsField.fieldName -> candidates )
+    asDecideResponses(amp.getMultiDecideWithContextUrl(userId), errorResponse)(reqJSON, timeout.getOrElse(this.timeOut))
+  }
+
+  private def asDecideResponses(url: String, errorResponse: String ⇒ DecideResponses)(reqJSON: JsonAST.JObject, timeout: Duration): DecideResponses = {
+    import org.json4s._
+    import org.json4s.jackson.JsonMethods._
+    import com.softwaremill.sttp._
+    import org.json4s.JsonAST.JArray
+
+    HttpUtils.postSync(timeout)(uri"$url", reqJSON) { response ⇒
+      parse(response).toOption
+        .collect {
+          case v: JObject ⇒ (v \ "decisions",  v \ "ampToken") //response handled.
+        }
+        .map { case (JArray(decisions), JString(token)) ⇒
+          val res = decisions.map(v => v \ "decision")
+            .collect { case JString(s) => DecideResponse(parse(s).asInstanceOf[JObject].values, token, fallback = false, Option.empty)}
+          DecideResponses(token, res, Option.empty)
+        }.getOrElse(DecideResponses.empty)
+    } match {
+      case Success(res) ⇒ res
+      case Failure(error) ⇒ errorResponse(error.getMessage)
+    }
+  }
+
   def decideWithContext(contextName: String, context: Map[String, Any], decisionName: String, candidates: List[CandidateField]): DecideResponse = decideWithContextInternal(contextName, context, decisionName, candidates, Option.empty)
   def decideWithContext(contextName: String, context: Map[String, Any], decisionName: String, candidates: List[CandidateField], timeout: Duration): DecideResponse = decideWithContextInternal(contextName, context, decisionName, candidates, Some(timeout))
 
   private def decideWithContextInternal(contextName: String, context: Map[String, Any], decisionName: String, candidates: List[CandidateField], timeout: Option[Duration]): DecideResponse = {
     import com.scaledinference.utils.OptionUtils._
-    require(contextName.toOption.nonEmpty, "Context name cannot be empty")
-    require(decisionName.toOption.nonEmpty, "Decision name cannot be empty")
+    val getDefaultDecision = () ⇒ getCandidatesAtIndex(candidates, 0)
+    if(decisionName.toOption.isEmpty || contextName.toOption.isEmpty || userId.toOption.isEmpty || sessionId.toOption.isEmpty)
+      return DecideResponse.empty.copy(decision = getDefaultDecision(), fallback = true, ampToken = this.ampToken, failureReason = Some("missing either one of them decisionName, contextName, userId or sessionId"))
+
+    if(Session.getCandidatesCombination(candidates) >= Session.DECIDE_UPPER_LIMIT){
+      return DecideResponse.empty.copy(decision = getDefaultDecision(), fallback = true, ampToken = this.ampToken, failureReason = Some(s"Using default decision because there are too many candidates ${Session.DECIDE_UPPER_LIMIT}"))
+    }
 
     import org.json4s.JsonAST._
     import org.json4s.JsonDSL._
@@ -41,16 +100,17 @@ case class Session(amp: Amp, userId: String, sessionId: String, timeOut: Duratio
         (CandidatesField.fieldName -> candidatesJObj) ~
         (LimitField.fieldName -> 1)
       )
-    asDecideResponse(amp.getDecideWithContextUrl(userId))(reqJSON, {()  ⇒ getCandidatesAtIndex(candidates, 0) }, timeout.getOrElse(this.timeOut))
+    asDecideResponse(amp.getDecideWithContextUrl(userId))(reqJSON, getDefaultDecision, timeout.getOrElse(this.timeOut))
   }
 
   def observe(contextName: String, context: Map[String, Any]): ObserveResponse = observeInternal(contextName, context, Option.empty)
-
   def observe(contextName: String, context: Map[String, Any], timeout: Duration): ObserveResponse = observeInternal(contextName, context, Some(timeout))
 
   private def observeInternal(contextName: String, context: Map[String, Any], timeout: Option[Duration]): ObserveResponse = {
     import com.scaledinference.utils.OptionUtils._
-    require(contextName.toOption.nonEmpty, "Context name cannot be empty")
+
+    if(contextName.toOption.isEmpty || userId.toOption.isEmpty || sessionId.toOption.isEmpty)
+      return ObserveResponse.empty.copy( ampToken = this.ampToken, failureReason = Some("missing either one of them contextName, userId or sessionId"))
 
     import org.json4s.JsonAST._
     import org.json4s.JsonDSL._
@@ -63,14 +123,16 @@ case class Session(amp: Amp, userId: String, sessionId: String, timeOut: Duratio
     import com.softwaremill.sttp._
     HttpUtils.postSync(timeout.getOrElse(this.timeOut))(uri"${amp.getObserveUrl(userId)}", reqJSON) { response ⇒
       parse(response).toOption
-        .collect{ case v: JObject if !amp.dontUseTokens ⇒ v.obj }
-        .flatMap{ list ⇒ list.collectFirst{
+        .collect{ case v: JObject ⇒ v.obj }
+        .flatMap{ list ⇒
+          list.collectFirst{
           case ("ampToken", JString(value)) ⇒
             privateAmpToken = value
             value
         } }
     } match {
       case Failure(error) ⇒ ObserveResponse.empty.copy(ampToken = this.ampToken, failureReason = Some(error.getMessage), success = false)
+      case Success(None) ⇒ ObserveResponse.empty.copy(ampToken = this.ampToken, failureReason = Some("Amg agent didn't return observe response"), success = false)
       case Success(Some(token)) ⇒ ObserveResponse.empty.copy(token, success=true)
     }
   }
@@ -80,9 +142,14 @@ case class Session(amp: Amp, userId: String, sessionId: String, timeOut: Duratio
 
   private def decideInternal(decisionName: String, candidates: List[CandidateField], timeout: Option[Duration] = Option.empty): DecideResponse = {
     import com.scaledinference.utils.OptionUtils._
-    require(decisionName.toOption.nonEmpty, "Context name cannot be empty")
-    require(Session.getCandidatesCombination(candidates) <= Session.DECIDE_UPPER_LIMIT, s"Can't have more than ${Session.DECIDE_UPPER_LIMIT} candidates")
 
+    val getDefaultDecision = () ⇒ getCandidatesAtIndex(candidates, 0)
+    if(decisionName.toOption.isEmpty || userId.toOption.isEmpty || sessionId.toOption.isEmpty)
+      return DecideResponse.empty.copy(decision = getDefaultDecision(), fallback = true, ampToken = this.ampToken, failureReason = Some("missing either one of them decisionName, userId or sessionId"))
+
+    if(Session.getCandidatesCombination(candidates) >= Session.DECIDE_UPPER_LIMIT){
+      return DecideResponse.empty.copy(decision = getDefaultDecision(), fallback = true, ampToken = this.ampToken, failureReason = Some(s"Using default decision because there are too many candidates ${Session.DECIDE_UPPER_LIMIT}"))
+    }
     import org.json4s.JsonAST._
     import org.json4s.JsonDSL._
     import org.json4s.jackson.JsonMethods._
@@ -94,17 +161,16 @@ case class Session(amp: Amp, userId: String, sessionId: String, timeOut: Duratio
         (CandidatesField.fieldName -> candidatesJObj) ~
           (LimitField.fieldName -> 1)
         )
-    asDecideResponse(amp.getDecideUrl(userId))(reqJSON, {()  ⇒ getCandidatesAtIndex(candidates, 0) }, timeout.getOrElse(this.timeOut))
+    asDecideResponse(amp.getDecideUrl(userId))(reqJSON, getDefaultDecision, timeout.getOrElse(this.timeOut))
   }
 
   private def asDecideResponse(url: String)(reqJSON: JsonAST.JObject, decision: () ⇒ Map[String, Any], timeout: Duration) = {
     import org.json4s.JsonAST._
     import org.json4s.jackson.JsonMethods._
     import com.softwaremill.sttp._
-
     HttpUtils.postSync(timeout)(uri"$url", reqJSON) { response ⇒
       parse(response).toOption
-        .collect { case v: JObject if !amp.dontUseTokens ⇒ v.obj }
+        .collect { case v: JObject ⇒ v.obj }
         .map { list ⇒
           list.collect {
             case ("ampToken", JString(value)) ⇒
@@ -117,12 +183,14 @@ case class Session(amp: Amp, userId: String, sessionId: String, timeOut: Duratio
         }
     } match {
       case Failure(error) ⇒ DecideResponse.empty.copy(decision= decision(), fallback = true, ampToken = this.ampToken, failureReason = Some(error.getMessage))
-      case Success(Some(entries)) ⇒
+      case Success(Some(entries: Seq[(String, Object)])) ⇒
         entries.foldLeft(DecideResponse.empty) {
           case (acc, ("ampToken", tokenValue: String)) ⇒ acc.copy(ampToken = tokenValue)
           case (acc, ("failureReason", reason: String)) ⇒ acc.copy(failureReason = Some(reason))
           case (acc, ("decision", decision: Map[String, Any])) ⇒ acc.copy(decision = decision)
+          case (acc, _) ⇒ acc
         }
+      case Success(None) ⇒ DecideResponse.empty.copy(decision= decision(), fallback = true, ampToken = this.ampToken, failureReason = Some("Amg agent didn't return decide response"))
     }
   }
 

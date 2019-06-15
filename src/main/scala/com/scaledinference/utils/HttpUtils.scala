@@ -1,7 +1,7 @@
 package com.scaledinference.utils
 
 import com.softwaremill.sttp.{HttpURLConnectionBackend, Id, SttpBackend, Uri, sttp}
-import org.json4s.jackson.JsonMethods.{compact, parse}
+import org.json4s.jackson.JsonMethods.compact
 
 import scala.concurrent.duration.Duration
 import org.json4s.JsonAST.JValue
