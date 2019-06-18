@@ -36,10 +36,10 @@ object AmpMultipleSession {
         }else println("Observe successfully sent to amp-agent.")
 
         // Session2
-        val session2 = amp.buildSession().copy(timeOut = 1 millisecond).build()
+        val session2 = amp.buildSession().copy(timeOut = 1 second).build()
         println(s"session2: ${session2}")
         val context2 = Map("browser_height" -> 1000, "browser_width" -> 480)
-        println("Calling session2.decideWithContext with 1 millisecond timeout")
+        println("Calling session2.decideWithContext with 1 second timeout")
         val decisionAndToken2 = session2.decideWithContext("AmpSession", context2, "ScalaDecisionWithContext", candidates)
         println(s"Returned ampToken \n ${decisionAndToken2.ampToken} \n of length ${decisionAndToken2.ampToken.length}")
         println(s"Returned decision: ${decisionAndToken2.decision}")
